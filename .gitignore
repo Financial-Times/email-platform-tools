@@ -1,0 +1,7 @@
+# Key Bases #
+#############
+config_dev.yaml
+
+# Other #
+#############
+*.csv

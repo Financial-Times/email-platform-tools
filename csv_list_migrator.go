@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/financial-times/email-news-api/newsapi"
+	"github.com/financial-times/email-platform-tools/config"
 )
 
 var limit int = 5
@@ -68,8 +69,12 @@ func importUserIDs(path string, c *newsapi.Client) error {
 }
 
 func main() {
+	var cfg config.Config
+	if err := config.Bind("config_dev.yaml", &cfg); err != nil {
+		fmt.Println(err)
+	}
 	r := &http.Client{}
-	h := map[string]string{"Authorization": "Basic "}
+	h := map[string]string{"Authorization": cfg.UsersAuth}
 	c := newsapi.NewClient(h, r)
 	importUserIDs("mapping.csv", c)
 }
