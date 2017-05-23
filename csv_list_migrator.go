@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +16,10 @@ import (
 )
 
 var limit int = 5
+
+type PostBody struct {
+	List string `json:"list"`
+}
 
 func importUserIDs(path string, c *newsapi.Client) error {
 	sem := make(chan bool, limit)
@@ -49,16 +54,20 @@ func importUserIDs(path string, c *newsapi.Client) error {
 			sem <- true
 			wg.Add(1)
 			go func(rec string) {
-				u := make(map[string]interface{})
+				u := make([]map[string]interface{}, 0)
 				defer func() {
 					wg.Done()
 					<-sem
 				}()
-				_, err := c.GetURL("https://email-webservices.ft.com/users/"+rec, &u)
-				if err != nil {
-					fmt.Println(err)
+				body := PostBody{List: "55c8861dfdf6f00300b9f89a"}
+				b, err := json.Marshal(body)
+				if err == nil {
+					_, err := c.PostURL("https://email-webservices.ft.com/users/"+rec+"/lists", b, &u)
+					if err != nil {
+						fmt.Println(err)
+					}
+					fmt.Println("cool")
 				}
-				fmt.Println(u)
 			}(record[0])
 		}
 	}
@@ -74,7 +83,7 @@ func main() {
 		fmt.Println(err)
 	}
 	r := &http.Client{}
-	h := map[string]string{"Authorization": cfg.UsersAuth}
+	h := map[string]string{"Authorization": cfg.UsersAuth, "Content-Type": "application/json"}
 	c := newsapi.NewClient(h, r)
 	importUserIDs("mapping.csv", c)
 }
