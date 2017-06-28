@@ -10,12 +10,13 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"github.com/financial-times/email-news-api/newsapi"
 	"github.com/financial-times/email-platform-tools/config"
 )
 
-var limit int = 5
+var limit int = 20
 
 type PostBody struct {
 	List string `json:"list"`
@@ -33,9 +34,12 @@ func importUserIDs(path string, c *newsapi.Client) error {
 
 	bufr := bufio.NewReader(f)
 	r := csv.NewReader(bufr)
+	var count uint64 = 0
 	var wg sync.WaitGroup
 	defer func() {
 		wg.Wait()
+		countFinal := atomic.LoadUint64(&count)
+		fmt.Println("Final:", countFinal)
 		close(sem)
 	}()
 
@@ -59,14 +63,15 @@ func importUserIDs(path string, c *newsapi.Client) error {
 					wg.Done()
 					<-sem
 				}()
-				body := PostBody{List: "55c8861dfdf6f00300b9f89a"}
+				body := PostBody{List: "58db721900eb6f0004d56a23"}
 				b, err := json.Marshal(body)
 				if err == nil {
 					_, err := c.PostURL("https://email-webservices.ft.com/users/"+rec+"/lists", b, &u)
 					if err != nil {
 						fmt.Println(err)
 					}
-					fmt.Println("cool")
+					atomic.AddUint64(&count, 1)
+					fmt.Println(count)
 				}
 			}(record[0])
 		}
@@ -85,5 +90,5 @@ func main() {
 	r := &http.Client{}
 	h := map[string]string{"Authorization": cfg.UsersAuth, "Content-Type": "application/json"}
 	c := newsapi.NewClient(h, r)
-	importUserIDs("mapping.csv", c)
+	importUserIDs("users.csv", c)
 }
